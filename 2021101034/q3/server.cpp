@@ -78,8 +78,11 @@ pair<string, int> read_string_from_socket(const int &fd, int bytes)
     return {output, bytes_received};
 }
 
-int send_string_on_socket(int fd, const string &s)
+int send_string_on_socket(int fd, const string &s,int del)
 {
+    if(del != 0){
+        sleep(del);
+    }
     // debug(s.length());
     int bytes_sent = write(fd, s.c_str(), s.length());
     if (bytes_sent < 0)
@@ -132,7 +135,7 @@ pair<int,string> handle_client_connection(int client_socket_fd)
                 msg_to_send_back += to_string(i) + "\t" + to_string(nextNode[0][i]) + "\t" + to_string(distances[i]) + "\n";
             }
         }
-        int sent_to_client = send_string_on_socket(client_socket_fd, msg_to_send_back);
+        int sent_to_client = send_string_on_socket(client_socket_fd, msg_to_send_back,0);
         // debug(sent_to_client);
         if (sent_to_client == -1)
         {
@@ -287,7 +290,8 @@ more precisely, a new socket that is dedicated to that particular client.
 
         // cout << "Connection to server successful" << endl;
 
-        send_string_on_socket(socket_fd, to_string(dest) + "|" + mesg);
+        future<int> fut = async(send_string_on_socket, socket_fd,to_string(dest) + "|" + mesg,delays[SNo][nextNode[SNo][dest]]);
+        // send_string_on_socket(socket_fd, to_string(dest) + "|" + mesg,del);
         // cout << "====" << endl;
     }
 
