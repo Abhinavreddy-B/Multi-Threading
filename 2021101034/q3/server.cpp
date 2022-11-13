@@ -121,7 +121,7 @@ pair<int,string> handle_client_connection(int client_socket_fd)
 
         int dest;
         char mesg[MAX_LENGTH];
-        sscanf(cmd.c_str(),"%d|%s",&dest,mesg);
+        sscanf(cmd.c_str(),"%d|%[^\n]s",&dest,mesg);
         string s=mesg;
 
         ////////////////////////////////////////

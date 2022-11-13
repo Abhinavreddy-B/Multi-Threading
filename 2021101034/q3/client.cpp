@@ -148,7 +148,7 @@ void begin_process()
         {
             int dest;
             char mesg[buff_sz];
-            sscanf(inp.c_str(), "send %d %s", &dest, mesg);
+            sscanf(inp.c_str(), "send %d %[^\n]s", &dest, mesg);
             to_send = to_string(dest) + "|" + string(mesg);
             send_string_on_socket(socket_fd, to_send);
             int num_bytes_read;
