@@ -1,0 +1,35 @@
+Simulation Stared.
+Chef 1 arrives at time 0.
+Customer 1 arrives at time 1.
+Order 1 placed by customer 1 has pizzas {1}.
+Order 1 placed by customer 1 awaits processing.
+Pizza 1 in order 1 assigned to chef 1.
+Order 1 placed by customer 1 is being processed.
+Chef 1 is preparing the pizza 1 from order 1.
+Customer 2 arrives at time 2.
+Order 2 placed by customer 2 has pizzas {1, 2}.
+Chef 1 has put the pizza 1 for order 1 in oven 1 at time 4.
+Customer 3 arrives at time 4.
+Order 3 placed by customer 3 has pizzas {3}.
+Customer 3 rejected.
+Customer 3 exits the drive-thru zone.
+Chef 2 arrives at time 20.
+Pizza 1 in order 2 assigned to chef 2.
+Chef 2 is preparing the pizza 1 from order 2.
+Chef 1 has picked up the pizza 1 for order 1 from the over at time 21.
+Customer 1 picks up their pizza 1.
+Customer 1 exits the drive-thru zone.
+Pizza 2 in order 2 assigned to chef 1.
+Chef 1 is preparing the pizza 2 from order 2.
+Chef 2 has put the pizza 1 for order 2 in oven 1 at time 23.
+Chef 1 has put the pizza 2 for order 2 in oven 2 at time 24.
+Chef 3 enters at time 30.
+Chef 1 has picked up the pizza 2 for order 2 in oven 1 at time 44.
+Customer 2 picks up their pizza 2.
+Chef 2 has picked up the pizza 1 for order 2 in oven 1 at time 53.
+Customer 2 picks up their pizza 1.
+Customer 2 exits the drive-thru.
+Chef 1 exits at time 60.
+Chef 2 exits at time 60.
+Chef 3 exits at time 120.
+Simulation Ended.

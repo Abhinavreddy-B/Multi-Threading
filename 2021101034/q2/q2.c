@@ -1,0 +1,718 @@
+#include <stdio.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <time.h>
+#include <assert.h>
+
+#define MAX_ORDERS 10
+#define MAX_CUSTOMERS 10
+#define MAX_PIZZA_INGREDIANTS 10
+
+typedef long long int ll;
+
+
+
+
+
+
+
+
+
+
+// ? Linked List Adt
+////////////////////////////////////////////////
+
+/**
+ * @brief just defining this for code reusability
+*/
+typedef struct {
+    int QCust;
+    int QPizza;
+} ListElement;
+
+/**
+ * @brief a basic node that can be used in a doubly linked list
+ * @param data it contains the data to be present in that node
+ * @param prev the pointer to the previous node
+ * @param next the pointer to the next node
+*/
+typedef struct _node node;
+
+
+/**
+ * @brief a pointer to a node 
+*/
+typedef struct _node* nodeptr;
+
+
+/**
+ * @brief a basic node that can be used in a doubly linked list
+ * @param data it contains the data to be present in that node
+ * @param prev the pointer to the previous node
+ * @param next the pointer to the next node
+*/
+struct _node{
+    ListElement data;
+    struct _node* prev;
+    struct _node* next;
+};
+
+
+/**
+ * @brief allocate space for a single node
+ * @param _x the data to be present in new node
+ * @return pointer to the created new node
+*/ 
+nodeptr MakeNode(const ListElement _x);
+
+
+/**
+ * @brief the structure to hold the head and tail of a doubly linked list
+ * @param root the pointer to the first node of the list
+ * @param tail the pointer to the last node of the list
+*/
+typedef struct my_dll my_dll;
+
+
+/**
+ * @brief the structure to hold the head and tail of a doubly linked list
+ * @param root the pointer to the first node of the list
+ * @param tail the pointer to the last node of the list
+*/
+struct my_dll{
+    nodeptr root;
+    nodeptr tail;
+};
+
+
+/**
+ * @brief creates an empty doubly linked list
+ * @return A copy of the created List
+*/
+my_dll CreateList(void);
+
+
+/**
+ * @brief checks if list is empty
+ * @param _L the structure of the list
+ * @return 0 if non-empty, otherwise returns 1
+*/
+int IsEmpty(const my_dll _L);
+
+
+/**
+ * @brief adds node at the end
+ * @param _x the new data to be inserted
+ * @param _L pointer to the structure of the list
+*/
+void insert(my_dll* _L, ListElement _x);
+
+
+/**
+ * @brief adds node at the specified position(zero-indexed)
+ * @param _L pointer to the structure of the list
+ * @param _x the new data to be inserted
+ * @param _i the position after which the node is to be inserted
+*/
+void insert_at(my_dll* _L,ListElement _x,int _i);
+
+
+/**
+ * @brief node node at the specified position(zero-indexed)
+ * @param _L pointer to the structure of the list
+ * @param _i the position of the node to be dll_deleted
+*/
+ListElement dll_delete(my_dll* _L,int _i);
+
+
+/**
+ * @brief finds for the first occurence of a data
+ * @param _L pointer to the structure of the list
+ * @param _x the new data to be found
+ * @return returns the index (zero-indexed) of the first occurence of _x, if not found returns -1
+*/
+int Find(const my_dll* _L,int _x);
+
+
+/**
+ * @brief dll_delete the elements at the odd indexes
+ * @param _L pointer to the structure of the list
+*/
+void prune(my_dll* _L);
+
+
+/**
+ * @brief Print all the elements of the linked list starting from index 0.
+ * @param _L structure of the list
+*/
+void print(const my_dll _L);
+
+
+/**
+ * @brief Print all the elements of the linked list in reverse order
+ * @param _L structure of the list
+*/
+void print_reverse(const my_dll _L);
+
+
+/**
+ * @brief to find the size of the list
+ * @param _L structure of the list
+ * @return the size of the list
+*/
+unsigned int get_size(const my_dll _L);
+/////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+// ? Structures
+////////////////////////////////////////
+typedef struct PizzaSArrt
+{
+    int Num;
+    int time;
+    int NumIng;
+    int *ingredients;
+} Pizza;
+
+typedef struct ChefSt
+{
+    int Entry;
+    int exit;
+    pthread_t thd;
+} Chef;
+
+typedef struct CustSt
+{
+    int Entry;
+    int NoOrd;
+    int *Order;
+    pthread_mutex_t OrderMtx;
+    int NoOfOrdCompl;
+    int NoOfOrdSucc;
+    sem_t Status;
+    sem_t Reject;
+    pthread_t thd;
+} Customers;
+//////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+// ? Globals
+///////////////////////////////////////////////
+time_t StartTime;
+
+int N, M, in, C, O, S;
+int *Ing;
+Pizza *PizzasArr;
+Chef *ChefArr;
+Customers CustArr[MAX_CUSTOMERS];
+my_dll Queue;
+int NChefsDone=0;
+///////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+
+// ? Semaphores & Mutex
+///////////////////////////////////////////////
+sem_t Oven;
+sem_t PizQueue;
+
+pthread_mutex_t ListLock;
+pthread_mutex_t IngStore;   
+pthread_mutex_t NChefsMtx;
+///////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+// ? Chef
+////////////////////////////////////////////////
+
+// mode = 1 means success , mode = -1 means reject
+void Update_Order(int mode,int CustNumber){
+    // printf("Updating in mode %d for %d",mode,CustNumber);
+    pthread_mutex_lock(&CustArr[CustNumber].OrderMtx);
+    if(mode == 1){
+        CustArr[CustNumber].NoOfOrdSucc++;
+        CustArr[CustNumber].NoOfOrdCompl++;
+    }else{
+        CustArr[CustNumber].NoOfOrdCompl++;
+    }
+    if(CustArr[CustNumber].NoOfOrdCompl == CustArr[CustNumber].NoOrd){
+        sem_post(&CustArr[CustNumber].Status);
+    }
+    pthread_mutex_unlock(&CustArr[CustNumber].OrderMtx);
+}
+
+void *Chef_Thread(void *arg)
+{
+    int CNo = (ll)arg;
+    sleep(ChefArr[CNo].Entry);
+    printf("Chef %d arrives at time %d\n",CNo,(int) difftime(time(0),StartTime));
+    while(1){
+        if(ChefArr[CNo].exit + StartTime - time(0) <=0 ){
+            break;
+        }
+
+        struct timespec timer;
+        clock_gettime(CLOCK_REALTIME, &timer);
+        timer.tv_sec += ChefArr[CNo].exit + StartTime - time(0);
+
+        // wait for some pizza to exist in Queue
+        if(sem_timedwait(&PizQueue,&timer) == -1){
+            // time of chef has finished.
+            break;
+        }else{
+            // Some Pizza exist in queue
+            pthread_mutex_lock(&ListLock);
+
+            // find if any pizza can be done within his finish time
+            int index = Find(&Queue,ChefArr[CNo].exit + StartTime - time(0));
+
+            if(index == -1){
+                // No pizza from the list can be done within his finish time
+                pthread_mutex_unlock(&ListLock);
+
+                // revert the effect of sem_timedwait(&PizQueue,&timer).
+                sem_post(&PizQueue);
+
+                // sleep for 1 second , and come back to check in the next second.
+                sleep(1);
+                continue;
+            }
+            // if some pizza can be done by him remove it from list
+            ListElement qp = dll_delete(&Queue,index);
+            pthread_mutex_unlock(&ListLock);
+
+            printf("Pizza %d in order %d has been assigned to Chef %d.\n",qp.QPizza,qp.QCust,CNo);
+            printf("Order %d placed by customer %d is being processed.\n",qp.QCust,qp.QCust);
+            pthread_mutex_lock(&IngStore);
+            int avbl = 1;
+            // printf("%d\n",PizzasArr[qp.QPizza].NumIng);
+            for(int i=0;i<PizzasArr[qp.QPizza].NumIng;i++){
+                // printf("needs %d, has %d\n",PizzasArr[qp.QPizza].ingredients[i],Ing[PizzasArr[qp.QPizza].ingredients[i]]);
+                if(Ing[PizzasArr[qp.QPizza].ingredients[i]] == 0){
+                    avbl = 0;
+                    break;
+                }
+            }
+            if(!avbl){
+                printf("Chef %d could not complete pizza %d for order %d due to ingredient shortage.\n",CNo,qp.QPizza,qp.QCust);
+                Update_Order(-1,qp.QCust);
+                continue;
+            }
+            printf("Chef %d is preparing the pizza %d for order %d.\n",CNo,qp.QPizza,qp.QCust);
+            sleep(3);
+            for(int i=0;i<PizzasArr[qp.QPizza].NumIng;i++){
+                Ing[i]--;
+            }
+            pthread_mutex_unlock(&IngStore);
+            printf("Chef %d is waiting for oven allocation for pizza %d for order %d.\n",CNo,qp.QPizza,qp.QCust);
+            sem_wait(&Oven);
+            printf("Chef %d has put the pizza %d for order %d in the oven at time %d\n",CNo,qp.QPizza,qp.QCust,(int) difftime(time(0),StartTime));
+            sleep(PizzasArr[qp.QPizza].time - 3);
+            printf("Chef %d has picked up the pizza %d for order %d from the oven at time %d\n",CNo,qp.QPizza,qp.QCust,(int) difftime(time(0),StartTime));
+            Update_Order(1,qp.QCust);
+        }
+    }
+    printf("Chef %d exits at time %d\n",CNo, (int) difftime(time(0),StartTime));
+    pthread_mutex_lock(&NChefsMtx);
+    NChefsDone++;
+    if(NChefsDone == C){
+        while (get_size(Queue) != 0)
+        {
+            ListElement qp = dll_delete(&Queue, 0);
+            Update_Order(-1, qp.QCust);
+        }
+    }
+    pthread_mutex_unlock(&NChefsMtx);
+    return NULL;
+}
+////////////////////////////////////////////////
+
+
+
+
+
+
+
+void *Cust_Thread(void *arg)
+{
+    int CNo = (ll) arg;
+    sleep(CustArr[CNo].Entry);
+    printf("Customer %d arrives at time %d\n",CNo,(int) difftime(time(0),StartTime));
+    printf("Order %d placed by customer %d has pizzas {",CNo,CNo);
+    for(int i=0;i<CustArr[CNo].NoOrd;i++){
+        if(i == CustArr[CNo].NoOrd - 1){
+            printf("%d}\n",CustArr[CNo].Order[i]);
+        }else{
+            printf("%d,",CustArr[CNo].Order[i]);
+        }
+    }
+    int avbl = 0;
+    pthread_mutex_lock(&IngStore);
+    for(int i=0;i<CustArr[CNo].NoOrd;i++){
+        if(Ing[i] != 0){
+            avbl = 1;
+            break;
+        }
+    }
+    pthread_mutex_unlock(&IngStore);
+    printf("Order %d placed by customer %d awaits processing.\n",CNo,CNo);
+    for(int i=0;i<CustArr[CNo].NoOrd;i++){
+        ListElement Ord = { .QCust = CNo , .QPizza = CustArr[CNo].Order[i] };
+        pthread_mutex_lock(&ListLock);
+        insert(&Queue, Ord);
+        pthread_mutex_unlock(&ListLock);
+        sem_post(&PizQueue);
+    }
+    sem_wait(&CustArr[CNo].Status);
+
+    return NULL;
+}
+
+
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////
+int main()
+{
+
+    scanf("%d%d%d%d%d%d", &N, &M, &in, &C, &O, &S);
+
+
+    ////////////////////////////////////////////////
+    PizzasArr = (Pizza *)malloc(sizeof(Pizza) * M);
+    Ing = (int *)malloc(sizeof(int) * in);
+    ChefArr = (Chef *)malloc(sizeof(Chef) * C);
+    Queue = CreateList();
+    ////////////////////////////////////////////////
+
+
+
+    ////////////////////////////////////////////////
+    sem_init(&Oven,0,O);
+    sem_init(&PizQueue,0,0);
+    ////////////////////////////////////////////////
+
+
+
+
+    ////////////////////////////////////////////////
+
+    for (int i = 0; i < M; i++)
+    {
+        scanf("%d%d%d", &PizzasArr[i].Num, &PizzasArr[i].time, &PizzasArr[i].NumIng);
+        PizzasArr[i].ingredients = (int *)malloc(sizeof(int) * PizzasArr[i].NumIng);
+        for (int j = 0; j < PizzasArr[i].NumIng; j++)
+        {
+            scanf("%d", &PizzasArr[i].ingredients[j]);
+            PizzasArr[i].ingredients[j]--; // 0 Index
+        }
+    }
+
+    // int Ing[in];
+    for (int i = 0; i < in; i++)
+    {
+        scanf("%d", &Ing[i]);
+    }
+
+    // Chef ChefArr[C];
+    for (int i = 0; i < C; i++)
+    {
+        scanf("%d%d", &ChefArr[i].Entry, &ChefArr[i].exit);
+    }
+
+    int Cust_Cnt = 0;
+    int CustNum = 0;
+    while (scanf("%d", &CustArr[CustNum].Entry) != EOF)
+    {
+        scanf("%d", &CustArr[CustNum].NoOrd);
+        CustArr[CustNum].Order = (int *)malloc(sizeof(int) * CustArr[CustNum].NoOrd);
+
+        for (int i = 0; i < CustArr[CustNum].NoOrd; i++)
+        {
+            scanf("%d", &CustArr[CustNum].Order[i]);
+            CustArr[CustNum].Order[i]--;
+        }
+        CustArr[CustNum].NoOfOrdCompl = 0;
+        CustArr[CustNum].NoOfOrdSucc = 0;
+        sem_init(&CustArr[CustNum].Status,0,0);
+        CustNum++;
+    }
+    ///////////////////////////////////////////
+    
+    
+
+
+
+    printf("Simulation Stared.\n");
+    StartTime = time(0);
+
+    for(int i=0;i<C;i++){
+        pthread_create(&ChefArr[i].thd,NULL,Chef_Thread,(void *) ((ll)i));
+    }
+
+    for(int i=0;i<CustNum;i++){
+        pthread_create(&CustArr[i].thd,NULL,Cust_Thread,(void *) ((ll)i));
+    }
+
+
+
+    // ? Test
+    ////////////////////////////////
+    // sleep(10);
+    // ListElement O1 = { .QCust = 0 , .QPizza = 0 };
+    // pthread_mutex_lock(&ListLock);
+    // insert(&Queue,O1);
+    // pthread_mutex_unlock(&ListLock);
+    // sem_post(&PizQueue);
+    /////////////////////////////////
+
+    for(int i=0;i<C;i++){
+        pthread_join(ChefArr[i].thd,NULL);
+    }
+
+    for(int i=0;i<CustNum;i++){
+        pthread_join(CustArr[i].thd,NULL);
+    }
+
+    printf("Simulation Ended.\n");
+}
+///////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+
+// ? Linked List ADT
+///////////////////////////////////////////////////////////
+nodeptr MakeNode(ListElement _x){
+    nodeptr temp = (nodeptr) malloc(sizeof(node));
+    assert(temp!=NULL);
+    temp->prev=NULL;
+    temp->next=NULL;
+    temp->data=_x;
+    return temp;
+}
+
+my_dll CreateList(void) //creating an empty list
+{
+    my_dll temp;
+    temp.root = NULL;
+    temp.tail = NULL;
+    return temp;
+}
+
+int IsEmpty(const my_dll _L)    //to check if empty
+{
+    if (_L.tail == NULL)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+void insert(my_dll* _L, ListElement _x) 
+{
+    if (!IsEmpty(*_L))                      //when list is non-empty
+    {
+        _L->tail->next = MakeNode(_x);
+        _L->tail->next->prev = _L->tail;
+        _L->tail = _L->tail->next;
+    }
+    else
+    {                                        //when list is empty
+        _L->tail = MakeNode(_x);
+        _L->root = _L->tail;
+    }
+}
+
+void insert_at(my_dll* _L,ListElement _x,int _i)
+{
+    if (!IsEmpty(*_L))                      //when list is non-empty
+    {
+        nodeptr curr_pos = _L->root;
+        while (_i--)
+        {
+            if (curr_pos == NULL)   //when given is i more than size of list
+            {
+                printf("i is not under limits\n");
+                return;
+            }
+            curr_pos = curr_pos->next;
+        }
+        nodeptr temp = MakeNode(_x);
+        if(curr_pos==NULL){         //when new node is to be inserted at the end , special case
+                                    //to update the "tail"
+            temp->prev=_L->tail;
+            _L->tail->next=temp;
+            _L->tail=temp;
+            return;
+        }
+        if(curr_pos->prev==NULL){       //when i=0 , special case in order to change the "root"
+            temp->next=curr_pos;
+            curr_pos->prev=temp;
+            _L->root=temp;
+            return;
+        }
+        temp->next = curr_pos;          //routine to insert 
+        temp->prev = curr_pos->prev;
+        curr_pos->prev = temp;
+        temp->prev->next = temp;
+    }
+    else if (_i == 0)       //when list is empty and i is exactly 0
+    {
+        _L->tail = MakeNode(_x);
+        _L->root = _L->tail;
+    }
+    else        //when list is empty and i is not 0
+    {
+        printf("i is not under limits\n");
+    }
+}
+
+
+ListElement dll_delete(my_dll* _L,int _i)
+{
+    if (!IsEmpty(*_L))                             //when list is not empty
+    {
+        if(_L->root==_L->tail){
+            //case where there is only 1 element
+            ListElement ret = _L->root->data;
+            free(_L->root);
+            _L->root=NULL;
+            _L->tail=NULL;
+            return ret;
+        }
+        nodeptr curr_pos = _L->root;
+        if(_i==0){                          //when i=0 , special case in order to change the "root"
+            _L->root=_L->root->next;
+            ListElement ret = _L->root->prev->data;
+            free(_L->root->prev);
+            _L->root->prev=NULL;
+            return ret;
+        }
+        while (_i--)
+        {
+            //printf("inside dll_delete function %d\n",_i);
+            curr_pos = curr_pos->next;
+            if (curr_pos == NULL)                              //when given is i more than size of list          
+            {
+                printf("i should not be more than the size of the list\n");
+                ListElement t;
+                t.QCust = -1;
+                t.QPizza = -1;
+                return t;
+            }
+        }
+        if(curr_pos->next==NULL){           //when node is to be dll_deleted at the end , special case
+                                            //to update the "tail"
+            _L->tail=_L->tail->prev;
+            ListElement ret = _L->tail->next->data;
+            free(_L->tail->next);
+            _L->tail->next=NULL;
+            return ret;
+        }
+        curr_pos->prev->next = curr_pos->next;
+        curr_pos->next->prev = curr_pos->prev;
+        free(curr_pos);
+    }
+    else                        //when list is empty 
+    {
+        printf("list is empty\n");
+    }
+    ListElement t;
+    t.QCust = -1;
+    t.QPizza = -1;
+    return t;
+}
+
+int Find(const my_dll* _L,int _x)
+{
+    int pos = 0;
+    nodeptr curr_pos = _L->root;
+    while (curr_pos)
+    {
+        if (PizzasArr[curr_pos->data.QPizza].time <= _x)
+            return pos;
+
+        pos++;
+        curr_pos = curr_pos->next;
+    }
+    return -1;
+}
+
+void prune(my_dll* _L){
+    return;
+}
+
+void print(const my_dll _L){
+    //printf("entered print function with %p\n",(void *) _L.root);
+    nodeptr curr_pos=_L.root;
+    while(curr_pos){
+        printf("%d-%d ",curr_pos->data.QCust,curr_pos->data.QPizza);
+        curr_pos=curr_pos->next;
+    }
+    printf("\n");
+}
+
+void print_reverse(const my_dll _L){
+    return;
+}
+
+unsigned int get_size(const my_dll _L){
+    int pos=0;
+    nodeptr curr_pos=_L.root;
+    while(curr_pos){
+     curr_pos=curr_pos->next;
+     pos++;
+    }     
+    return pos;
+}
+//////////////////////////////////////////////////////////////

@@ -245,6 +245,7 @@ void *server_main(void *arg)
 
     /* listen for incoming connection requests */
 
+    sem_post(&Creation);
     while (1)
     {
         /* accept a new request, create a client_socket_fd */
@@ -259,7 +260,6 @@ more precisely, a new socket that is dedicated to that particular client.
         clilen = sizeof(client_addr_obj);
 
         int dest;
-        sem_post(&Creation);
 
         // printf("Waiting for a new client to request for a connection - %d\n", SNo);
         client_socket_fd = accept(wel_socket_fd, (struct sockaddr *)&client_addr_obj, &clilen);
