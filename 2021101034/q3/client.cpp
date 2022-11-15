@@ -121,9 +121,21 @@ int get_socket_fd(struct sockaddr_in *ptr)
 }
 ////////////////////////////////////////////////////////
 
+
+
+// ! Code of Client Nothing Changed Much.
 void begin_process()
 {
 
+    struct sockaddr_in server_obj;
+    int socket_fd = get_socket_fd(&server_obj);
+
+    string to_send = to_string(-3) + "|" + string("lol");
+    send_string_on_socket(socket_fd, to_send);
+    int num_bytes_read;
+    string output_msg;
+    tie(output_msg, num_bytes_read) = read_string_from_socket(socket_fd, buff_sz);
+    
     while (true)
     {
         struct sockaddr_in server_obj;
@@ -158,6 +170,11 @@ void begin_process()
         else
         {
             cout << "Invalid command\n";
+            to_send = to_string(-2) + "|" + string("lol");
+            send_string_on_socket(socket_fd, to_send);
+            int num_bytes_read;
+            string output_msg;
+            tie(output_msg, num_bytes_read) = read_string_from_socket(socket_fd, buff_sz);
             continue;
         }
         // cout << "Received: " << output_msg << endl;

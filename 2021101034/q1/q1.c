@@ -69,12 +69,12 @@ void *Student_thread(void* arg){
         
         printf("\033[31;1m%d: Student %d leaves without washing\n\033[0m",(int) difftime(time(0),Start_time),Student);
         
-        
+        // ? Update WastedTime
         pthread_mutex_lock(&WastedMtx);
         WastedTime +=  wasted_time;
         pthread_mutex_unlock(&WastedMtx);
         
-        
+        // ? Update Count of Unhappy Users
         pthread_mutex_lock(&UnhappyMtx);
         Unhappy++;
         pthread_mutex_unlock(&UnhappyMtx);
@@ -91,6 +91,7 @@ void *Student_thread(void* arg){
         sem_post(&Machines);
         
         
+        // ? Update WastedTime
         pthread_mutex_lock(&WastedMtx);
         WastedTime +=  wasted_time;
         pthread_mutex_unlock(&WastedMtx);
@@ -118,6 +119,7 @@ int main(){
         scanf("%d%d%d",&T[i],&W[i],&P[i]);
     }
 
+    // ? Sort According to time , In order to create Threads at correct times.
     qsort(A,N,sizeof(A[0]),cmp);
 
     Start_time = time(0);
@@ -130,8 +132,12 @@ int main(){
         }
         pthread_create(&Students[i],NULL,Student_thread,(void *) &A[i]);
         time = T[A[i]];
+
+        // * Wait till previous student get stabilised in the line.
         sem_wait(&Creation);
     }
+
+    // ? Wait For All Students to complete washing.
     for(int i=0;i<N;i++){
         pthread_join(Students[i],NULL);
     }

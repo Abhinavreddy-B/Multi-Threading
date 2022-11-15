@@ -80,6 +80,8 @@ pair<string, int> read_string_from_socket(const int &fd, int bytes)
 
 int send_string_on_socket(int fd, const string &s,int del)
 {
+
+    // ? Simulate Network Delay ( to be called asyncronously ).
     if(del != 0){
         sleep(del);
     }
@@ -87,12 +89,14 @@ int send_string_on_socket(int fd, const string &s,int del)
     int bytes_sent = write(fd, s.c_str(), s.length());
     if (bytes_sent < 0)
     {
-        cerr << "Failed to SEND DATA via socket.\n";
+        // cerr << "Failed to SEND DATA via socket.\n";
     }
 
     return bytes_sent;
 }
 
+// ! Nothing CHanged Much in this function 
+// ? Only Reads One message From Client, decods the string, returns destination , message.
 pair<int,string> handle_client_connection(int client_socket_fd)
 {
     // int client_socket_fd = *((int *)client_socket_fd_ptr);
@@ -121,6 +125,8 @@ pair<int,string> handle_client_connection(int client_socket_fd)
 
         int dest;
         char mesg[MAX_LENGTH];
+
+        // ? Decode the String
         sscanf(cmd.c_str(),"%d|%[^\n]s",&dest,mesg);
         string s=mesg;
 
@@ -128,6 +134,13 @@ pair<int,string> handle_client_connection(int client_socket_fd)
         // "If the server write a message on the socket and then close it before the client's read. Will the client be able to read the message?"
         // Yes. The client will get the data that was sent before the FIN packet that closes the socket.
 
+        if(dest == -3){
+            int sent_to_client = send_string_on_socket(client_socket_fd, "lol",0);
+            close(client_socket_fd);
+            printf(BGRN "connected to client\n" ANSI_RESET "\n");
+            string s = "connected";
+            return make_pair(-3, s);
+        }
         if(dest == -1){
             msg_to_send_back = "";
             msg_to_send_back += "dest\tforw\tdelay\n";
@@ -148,8 +161,9 @@ pair<int,string> handle_client_connection(int client_socket_fd)
     }
 close_client_socket_ceremony:
     close(client_socket_fd);
-    printf(BRED "Disconnected from client" ANSI_RESET "\n");
-    return make_pair(0,string(NULL));
+    printf(BRED "Disconnected from client\n" ANSI_RESET "\n");
+    string s= "disconnected";
+    return make_pair(-2,s);
 }
 
 int get_socket_fd(struct sockaddr_in *ptr, int port)
@@ -274,6 +288,10 @@ more precisely, a new socket that is dedicated to that particular client.
         string mesg;
         tie(dest,mesg) = handle_client_connection(client_socket_fd);
 
+        if(dest == -2 || dest == -3){
+            send_string_on_socket(client_socket_fd, "lol",0);
+            continue;
+        }
         if(dest == -1){
             continue;
         }
@@ -286,10 +304,13 @@ more precisely, a new socket that is dedicated to that particular client.
 
         cout << "Data received at node:" << SNo << "; Source : 0; Destination :" << dest << "; Fowarded_Destination : " << nextNode[SNo][dest] << "; Message : \"" << mesg << "\";\n";
         struct sockaddr_in server_obj;
+
+        // ? Connect to the Next server as a client.
         int socket_fd = get_socket_fd(&server_obj, portNum[nextNode[SNo][dest]]);
 
         // cout << "Connection to server successful" << endl;
 
+        // ? Call send_string_on_socket() asyncronously , to simulate Network delays.
         future<int> fut = async(send_string_on_socket, socket_fd,to_string(dest) + "|" + mesg,delays[SNo][nextNode[SNo][dest]]);
         // send_string_on_socket(socket_fd, to_string(dest) + "|" + mesg,del);
         // cout << "====" << endl;
@@ -300,6 +321,7 @@ more precisely, a new socket that is dedicated to that particular client.
     return 0;
 }
 
+/// @brief Run Dijkstra, And Update the Parent[i] for each node i.
 void dijkstra(vector<pair<int, int>> adj[])
 {
     int cnt = 0;
@@ -361,11 +383,16 @@ int main()
     }
     
     distances[0] = 0;
+
+    // ? Run dijkstra
     dijkstra(adj);
-    for (int i = 0; i < n; i++)
-    {
-        cout << parent[i] << '\n';
-    }
+
+
+    // ? Backtrace parent[i] to get the path 0->i for all i.
+    // for (int i = 0; i < n; i++)
+    // {
+    //     cout << parent[i] << '\n';
+    // }
     for (int i = 0; i < n; i++)
     {
         for (int j = i; j != 0;)
@@ -374,24 +401,28 @@ int main()
             j = parent[j];
         }
     }
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            cout << nextNode[i][j] << ' ';
-        }
-        cout << '\n';
-    }
+    // for (int i = 0; i < n; i++)
+    // {
+    //     for (int j = 0; j < n; j++)
+    //     {
+    //         cout << nextNode[i][j] << ' ';
+    //     }
+    //     cout << '\n';
+    // }
     for (int i = 0; i < n; i++)
     {
         portNum[i] = PORT_ARG + i;
     }
     sem_init(&Creation, 0, 0);
+
+    printf("Starting Server Nodes...\n");
+    // ? Create server Nodes
     for (int i = 0; i < n; i++)
     {
         pthread_create(&threads[i], NULL, server_main, &i);
         sem_wait(&Creation);
     }
+    printf("Started Server Nodes\n");
     for (int i = 0; i < n; i++)
     {
         pthread_join(threads[i], NULL);

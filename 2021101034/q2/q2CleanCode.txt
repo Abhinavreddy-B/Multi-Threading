@@ -289,25 +289,16 @@ void Update_Order(int mode,int CustNumber,ListElement qp){
         insert(&PQueue, qp);
         pthread_mutex_unlock(&PickUpMtx);
         if(CustArr[CustNumber].NoOfOrdCompl == CustArr[CustNumber].NoOrd && CustArr[CustNumber].NoOfOrdSucc == CustArr[CustNumber].NoOrd){
-            #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(BBLU "Order %d placed by customer %d has been processed.\n",qp.QCust+1,qp.QCust+1);
+            printf(BBLU "Order %d placed by customer %d has been processed.\n",qp.QCust+1,qp.QCust+1);
         }else if(CustArr[CustNumber].NoOfOrdCompl == CustArr[CustNumber].NoOrd){
-            #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(BBLU "Order %d placed by customer %d partially processed and remaining couldn't be.\n",qp.QCust+1,qp.QCust+1);
+            printf(BBLU "Order %d placed by customer %d partially processed and remaining couldn't be.\n",qp.QCust+1,qp.QCust+1);
         }
     }else{
         CustArr[CustNumber].NoOfOrdCompl++;
         if(CustArr[CustNumber].NoOfOrdCompl == CustArr[CustNumber].NoOrd && CustArr[CustNumber].NoOfOrdSucc == 0){
             sem_post(&CustArr[qp.QCust].Reject);
         }else if(CustArr[CustNumber].NoOfOrdCompl == CustArr[CustNumber].NoOrd){
-            #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(BBLU "Order %d placed by customer %d partially processed and remaining couldn't be.\n",qp.QCust+1,qp.QCust+1);
+            printf(BBLU "Order %d placed by customer %d partially processed and remaining couldn't be.\n",qp.QCust+1,qp.QCust+1);
         }
     }
     pthread_mutex_unlock(&CustArr[CustNumber].OrderMtx);
@@ -318,10 +309,7 @@ void *Chef_Thread(void *arg)
 {
     int CNo = (ll)arg;
     sleep(ChefArr[CNo].Entry);
-    #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(ANSI_RESET "Chef %d arrives at time %d\n",CNo+1,(int) difftime(time(0),StartTime));
+    printf(ANSI_RESET "Chef %d arrives at time %d\n",CNo+1,(int) difftime(time(0),StartTime));
     while(1){
         if(ChefArr[CNo].exit + StartTime - time(0) <=0 ){
             break;
@@ -357,14 +345,8 @@ printf(ANSI_RESET "Chef %d arrives at time %d\n",CNo+1,(int) difftime(time(0),St
             ListElement qp = dll_delete(&Queue,index);
             pthread_mutex_unlock(&ListLock);
 
-            #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(ANSI_RESET "Pizza %d in order %d has been assigned to Chef %d.\n",qp.QPizza + 1,qp.QCust + 1,CNo + 1);
-            #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(BBLU "Order %d placed by customer %d is being processed.\n",qp.QCust + 1,qp.QCust + 1);
+            printf(ANSI_RESET "Pizza %d in order %d has been assigned to Chef %d.\n",qp.QPizza + 1,qp.QCust + 1,CNo + 1);
+            printf(BBLU "Order %d placed by customer %d is being processed.\n",qp.QCust + 1,qp.QCust + 1);
             pthread_mutex_lock(&IngStore);
             int avbl = 1;
             for(int i=0;i<PizzasArr[qp.QPizza].NumIng;i++){
@@ -374,44 +356,26 @@ printf(BBLU "Order %d placed by customer %d is being processed.\n",qp.QCust + 1,
                 }
             }
             if(!avbl){
-                #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(ANSI_RESET "Chef %d could not complete pizza %d for order %d due to ingredient shortage.\n",CNo+1,qp.QPizza+1,qp.QCust + 1);
+                printf(ANSI_RESET "Chef %d could not complete pizza %d for order %d due to ingredient shortage.\n",CNo+1,qp.QPizza+1,qp.QCust + 1);
                 Update_Order(-1,qp.QCust,qp);
                 pthread_mutex_unlock(&IngStore);
                 continue;
             }
-            #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(ANSI_RESET "Chef %d is preparing the pizza %d for order %d.\n",CNo+1,qp.QPizza+1,qp.QCust+1);
+            printf(ANSI_RESET "Chef %d is preparing the pizza %d for order %d.\n",CNo+1,qp.QPizza+1,qp.QCust+1);
             sleep(3);
             for(int i=0;i<PizzasArr[qp.QPizza].NumIng;i++){
                 Ing[i]--;
             }
             pthread_mutex_unlock(&IngStore);
-            #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(ANSI_RESET "Chef %d is waiting for oven allocation for pizza %d for order %d.\n",CNo+1,qp.QPizza+1,qp.QCust+1);
+            printf(ANSI_RESET "Chef %d is waiting for oven allocation for pizza %d for order %d.\n",CNo+1,qp.QPizza+1,qp.QCust+1);
             sem_wait(&Oven);
-            #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(ANSI_RESET "Chef %d has put the pizza %d for order %d in the oven at time %d\n",CNo+1,qp.QPizza+1,qp.QCust+1,(int) difftime(time(0),StartTime));
+            printf(ANSI_RESET "Chef %d has put the pizza %d for order %d in the oven at time %d\n",CNo+1,qp.QPizza+1,qp.QCust+1,(int) difftime(time(0),StartTime));
             sleep(PizzasArr[qp.QPizza].time - 3);
-            #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(ANSI_RESET "Chef %d has picked up the pizza %d for order %d from the oven at time %d\n",CNo+1,qp.QPizza+1,qp.QCust+1,(int) difftime(time(0),StartTime));
+            printf(ANSI_RESET "Chef %d has picked up the pizza %d for order %d from the oven at time %d\n",CNo+1,qp.QPizza+1,qp.QCust+1,(int) difftime(time(0),StartTime));
             Update_Order(1,qp.QCust,qp);
         }
     }
-    #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(ANSI_RESET "Chef %d exits at time %d\n",CNo, (int) difftime(time(0),StartTime));
+    printf(ANSI_RESET "Chef %d exits at time %d\n",CNo, (int) difftime(time(0),StartTime));
     pthread_mutex_lock(&NChefsMtx);
     NChefsDone++;
     if(NChefsDone == C){
@@ -436,31 +400,19 @@ void *Cust_Thread(void *arg)
 {
     int CNo = (ll) arg;
     sleep(CustArr[CNo].Entry);
-    #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(BGRN "Customer %d arrives at time %d\n",CNo + 1,(int) difftime(time(0),StartTime));
+    printf(BGRN "Customer %d arrives at time %d\n",CNo + 1,(int) difftime(time(0),StartTime));
 
     pthread_mutex_lock(&NChefsMtx);
     if(NChefsDone == C){
-        #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(BGRN "Customer %d rejected.\n",CNo + 1);
-        #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(BGRN "Customer %d exits the drive-thru.\n",CNo + 1);
+        printf(BGRN "Customer %d rejected.\n",CNo + 1);
+        printf(BGRN "Customer %d exits the drive-thru.\n",CNo + 1);
         pthread_mutex_unlock(&NChefsMtx);
         return NULL;
     }
     pthread_mutex_unlock(&NChefsMtx);
     
 
-    #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(BBLU "Order %d placed by customer %d has pizzas {",CNo + 1,CNo + 1);
+    printf(BBLU "Order %d placed by customer %d has pizzas {",CNo + 1,CNo + 1);
     for(int i=0;i<CustArr[CNo].NoOrd;i++){
         if(i == CustArr[CNo].NoOrd - 1){
             printf("%d}\n",CustArr[CNo].Order[i]+1);
@@ -488,10 +440,7 @@ printf(BBLU "Order %d placed by customer %d has pizzas {",CNo + 1,CNo + 1);
     pthread_mutex_unlock(&IngStore);
 
     if(avbl){
-        #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(BBLU "Order %d placed by customer %d awaits processing.\n", CNo + 1, CNo + 1);
+        printf(BBLU "Order %d placed by customer %d awaits processing.\n", CNo + 1, CNo + 1);
         for (int i = 0; i < CustArr[CNo].NoOrd; i++)
         {
             ListElement Ord = {.QCust = CNo, .QPizza = CustArr[CNo].Order[i]};
@@ -508,10 +457,7 @@ printf(BBLU "Order %d placed by customer %d awaits processing.\n", CNo + 1, CNo 
 
         // sleep(S);
         if(sem_timedwait(&CustArr[CNo].Reject,&timer) == -1){
-            #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(BGRN "Customer %d is waiting at the pickup spot.\n",CNo+1);
+            printf(BGRN "Customer %d is waiting at the pickup spot.\n",CNo+1);
             int cnt = 0;
             while (1)
             {
@@ -534,28 +480,16 @@ printf(BGRN "Customer %d is waiting at the pickup spot.\n",CNo+1);
                 ListElement qp = dll_delete(&PQueue, index);
                 pthread_mutex_unlock(&PickUpMtx);
                 cnt++;
-                #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(BGRN "Customer %d picks up their pizza %d.\n", CNo + 1, qp.QPizza + 1);
+                printf(BGRN "Customer %d picks up their pizza %d.\n", CNo + 1, qp.QPizza + 1);
             }
         }else{
-            #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(BGRN "Customer %d rejected.\n",CNo + 1);
+            printf(BGRN "Customer %d rejected.\n",CNo + 1);
         }
     }else{
-        #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(BGRN "Customer %d rejected.\n",CNo + 1);
+        printf(BGRN "Customer %d rejected.\n",CNo + 1);
     }
 
-    #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf(BGRN "Customer %d exits the drive-thru.\n",CNo + 1);
+    printf(BGRN "Customer %d exits the drive-thru.\n",CNo + 1);
     return NULL;
 }
 
@@ -642,10 +576,7 @@ int main()
 
     StartTime = time(0);
 
-    #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf("Simulation Stared.\n");
+    printf("Simulation Stared.\n");
 
     for(int i=0;i<C;i++){
         pthread_create(&ChefArr[i].thd,NULL,Chef_Thread,(void *) ((ll)i));
@@ -675,10 +606,7 @@ printf("Simulation Stared.\n");
         pthread_join(CustArr[i].thd,NULL);
     }
 
-    #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf("Simulation Ended.\n");
+    printf("Simulation Ended.\n");
 }
 ///////////////////////////////////////////////////////////
 
@@ -745,10 +673,7 @@ void insert_at(my_dll* _L,ListElement _x,int _i)
         {
             if (curr_pos == NULL)   //when given is i more than size of list
             {
-                #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf("i is not under limits\n");
+                printf("i is not under limits\n");
                 return;
             }
             curr_pos = curr_pos->next;
@@ -779,10 +704,7 @@ printf("i is not under limits\n");
     }
     else        //when list is empty and i is not 0
     {
-        #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf("i is not under limits\n");
+        printf("i is not under limits\n");
     }
 }
 
@@ -813,10 +735,7 @@ ListElement dll_delete(my_dll* _L,int _i)
             curr_pos = curr_pos->next;
             if (curr_pos == NULL)                              //when given is i more than size of list          
             {
-                #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf("i should not be more than the size of the list\n");
+                printf("i should not be more than the size of the list\n");
                 ListElement t;
                 t.QCust = -1;
                 t.QPizza = -1;
@@ -837,10 +756,7 @@ printf("i should not be more than the size of the list\n");
     }
     else                        //when list is empty 
     {
-        #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf("list is empty\n");
+        printf("list is empty\n");
     }
     ListElement t;
     t.QCust = -1;
@@ -886,16 +802,10 @@ void print(const my_dll _L){
     
     nodeptr curr_pos=_L.root;
     while(curr_pos){
-        #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf("%d-%d ",curr_pos->data.QCust,curr_pos->data.QPizza);
+        printf("%d-%d ",curr_pos->data.QCust,curr_pos->data.QPizza);
         curr_pos=curr_pos->next;
     }
-    #ifdef DEBUG_MODE
-printf(BRED "%d: " ANSI_RESET ,(int) difftime(time(0),StartTime));
-#endif
-printf("\n");
+    printf("\n");
 }
 
 void print_reverse(const my_dll _L){

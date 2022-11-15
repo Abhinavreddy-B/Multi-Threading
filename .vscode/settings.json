@@ -1,5 +1,9 @@
 {
     "files.associations": {
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "future": "cpp",
+        "*.tcc": "c",
+        "bitset": "c",
+        "algorithm": "c"
     }
 }
